@@ -103,8 +103,12 @@ public class BackendPlaySessionHandler implements MinecraftSessionHandler {
     }
 
     if (PluginMessageUtil.isMcBrand(packet)) {
-      PluginMessage rewritten = PluginMessageUtil.rewriteMinecraftBrand(packet,
-          server.getVersion());
+      PluginMessage rewritten;
+      if (playerConnection.getProtocolVersion().compareTo(ProtocolVersion.MINECRAFT_1_8) >= 0) {
+        rewritten = PluginMessageUtil.rewriteMinecraftBrand(packet, server.getVersion());
+      } else {
+        rewritten = PluginMessageUtil.rewriteMinecraftBrand17(packet, server.getVersion());
+      }
       playerConnection.write(rewritten);
       return true;
     }

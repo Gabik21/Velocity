@@ -1,6 +1,7 @@
 package com.velocitypowered.proxy.connection.client;
 
 import static com.velocitypowered.api.network.ProtocolVersion.MINECRAFT_1_13;
+import static com.velocitypowered.api.network.ProtocolVersion.MINECRAFT_1_8;
 import static com.velocitypowered.proxy.protocol.util.PluginMessageUtil.constructChannelsPacket;
 
 import com.velocitypowered.api.event.connection.PluginMessageEvent;
@@ -32,11 +33,9 @@ import io.netty.buffer.ByteBuf;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
-import java.util.Set;
 import java.util.UUID;
 import net.kyori.text.TextComponent;
 import net.kyori.text.format.TextColor;
@@ -218,7 +217,11 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
         player.getKnownChannels().removeAll(PluginMessageUtil.getChannels(packet));
         backendConn.write(packet);
       } else if (PluginMessageUtil.isMcBrand(packet)) {
-        backendConn.write(PluginMessageUtil.rewriteMinecraftBrand(packet, server.getVersion()));
+        if (backendConn.getProtocolVersion().compareTo(MINECRAFT_1_8) >= 0) {
+          backendConn.write(PluginMessageUtil.rewriteMinecraftBrand(packet, server.getVersion()));
+        } else {
+          backendConn.write(PluginMessageUtil.rewriteMinecraftBrand17(packet, server.getVersion()));
+        }
       } else {
         if (serverConn.getPhase() == BackendConnectionPhases.IN_TRANSITION) {
           // We must bypass the currently-connected server when forwarding Forge packets.
@@ -378,8 +381,10 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
     }
 
     // Clear any title from the previous server.
-    player.getMinecraftConnection()
-        .delayedWrite(TitlePacket.resetForProtocolVersion(player.getProtocolVersion()));
+    if (player.getProtocolVersion().compareTo(MINECRAFT_1_8) >= 0) {
+      player.getMinecraftConnection()
+          .delayedWrite(TitlePacket.resetForProtocolVersion(player.getProtocolVersion()));
+    }
 
     // Flush everything
     player.getMinecraftConnection().flush();

@@ -7,6 +7,7 @@ import com.velocitypowered.api.util.GameProfile;
 import com.velocitypowered.proxy.connection.MinecraftConnection;
 import com.velocitypowered.proxy.protocol.packet.HeaderAndFooter;
 import com.velocitypowered.proxy.protocol.packet.PlayerListItem;
+import com.velocitypowered.proxy.protocol.packet.PlayerListItem.Item;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -22,6 +23,8 @@ public class VelocityTabList implements TabList {
 
   private final MinecraftConnection connection;
   private final Map<UUID, TabListEntry> entries = new ConcurrentHashMap<>();
+  // Legacy 1.7
+  private final Map<String, PlayerListItem.Item> usernames = new ConcurrentHashMap<>();
 
   public VelocityTabList(MinecraftConnection connection) {
     this.connection = connection;
@@ -66,9 +69,9 @@ public class VelocityTabList implements TabList {
   }
 
   /**
-   * Clears all entries from the tab list. Note that the entries are written with
-   * {@link MinecraftConnection#delayedWrite(Object)}, so make sure to do an explicit
-   * {@link MinecraftConnection#flush()}.
+   * Clears all entries from the tab list. Note that the entries are written with {@link
+   * MinecraftConnection#delayedWrite(Object)}, so make sure to do an explicit {@link
+   * MinecraftConnection#flush()}.
    */
   public void clearAll() {
     List<PlayerListItem.Item> items = new ArrayList<>();
@@ -76,7 +79,15 @@ public class VelocityTabList implements TabList {
       items.add(PlayerListItem.Item.from(value));
     }
     entries.clear();
-    connection.delayedWrite(new PlayerListItem(PlayerListItem.REMOVE_PLAYER, items));
+    if (!items.isEmpty()) {
+      connection.delayedWrite(new PlayerListItem(PlayerListItem.REMOVE_PLAYER, items));
+    } else if (!usernames.isEmpty()) {
+      for (Item item : usernames.values()) {
+        connection.delayedWrite(
+            new PlayerListItem(PlayerListItem.REMOVE_PLAYER, Collections.singletonList(item)));
+      }
+      usernames.clear();
+    }
   }
 
   @Override
@@ -92,12 +103,29 @@ public class VelocityTabList implements TabList {
 
   /**
    * Processes a tab list entry packet from the backend.
+   *
    * @param packet the packet to process
    */
   public void processBackendPacket(PlayerListItem packet) {
     // Packets are already forwarded on, so no need to do that here
     for (PlayerListItem.Item item : packet.getItems()) {
       UUID uuid = item.getUuid();
+
+      // Legacy 1.7
+      if (uuid == null) {
+        switch (packet.getAction()) { // only got two cases
+          case PlayerListItem.ADD_PLAYER:
+            usernames.put(item.getName(), item);
+            break;
+          case PlayerListItem.REMOVE_PLAYER:
+            usernames.remove(item.getName());
+            break;
+          default:
+            break;
+        }
+        continue;
+      }
+
       if (packet.getAction() != PlayerListItem.ADD_PLAYER && !entries.containsKey(uuid)) {
         // Sometimes UPDATE_GAMEMODE is sent before ADD_PLAYER so don't want to warn here
         continue;

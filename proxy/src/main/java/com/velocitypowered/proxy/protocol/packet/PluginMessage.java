@@ -50,8 +50,12 @@ public class PluginMessage implements MinecraftPacket {
     if (version.compareTo(ProtocolVersion.MINECRAFT_1_13) >= 0) {
       this.channel = transformLegacyToModernChannel(this.channel);
     }
-    this.data = new byte[buf.readableBytes()];
-    buf.readBytes(data);
+    if (version.compareTo(ProtocolVersion.MINECRAFT_1_8) >= 0) {
+      this.data = new byte[buf.readableBytes()];
+      buf.readBytes(data);
+    } else {
+      data = ProtocolUtils.readArray17(buf);
+    }
   }
 
   @Override
@@ -64,7 +68,11 @@ public class PluginMessage implements MinecraftPacket {
     } else {
       ProtocolUtils.writeString(buf, this.channel);
     }
-    buf.writeBytes(data);
+    if (version.compareTo(ProtocolVersion.MINECRAFT_1_8) >= 0) {
+      buf.writeBytes(data);
+    } else {
+      ProtocolUtils.writeArray17(data, buf, true); // True for Forge support
+    }
   }
 
   @Override

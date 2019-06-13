@@ -150,6 +150,28 @@ public class PluginMessageUtil {
     return newMsg;
   }
 
+  /**
+   * Rewrites the brand message to indicate the presence of Velocity. Legacy 1.7.
+   * @param message the plugin message
+   * @param version the proxy version
+   * @return the rewritten plugin message
+   */
+  public static PluginMessage rewriteMinecraftBrand17(PluginMessage message, ProxyVersion version) {
+    checkNotNull(message, "message");
+    checkNotNull(version, "version");
+    checkArgument(isMcBrand(message), "message is not a brand plugin message");
+
+    String toAppend = " (" + version.getName() + ")";
+
+    String currentBrand = new String(message.getData(), StandardCharsets.UTF_8);
+
+    PluginMessage newMsg = new PluginMessage();
+    newMsg.setChannel(message.getChannel());
+    newMsg.setData((currentBrand + toAppend).getBytes());
+
+    return newMsg;
+  }
+
   private static final Pattern INVALID_IDENTIFIER_REGEX = Pattern.compile("[^a-z0-9\\-_]*");
 
   /**
