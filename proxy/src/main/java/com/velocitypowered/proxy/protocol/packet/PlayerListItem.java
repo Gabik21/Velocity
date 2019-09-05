@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.UUID;
 import net.kyori.text.Component;
 import net.kyori.text.serializer.gson.GsonComponentSerializer;
-import net.kyori.text.serializer.legacy.LegacyComponentSerializer;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class PlayerListItem implements MinecraftPacket {
@@ -125,13 +124,7 @@ public class PlayerListItem implements MinecraftPacket {
       }
     } else {
       Item item = items.get(0);
-      if (item.getDisplayName() != null) {
-        String displayName = LegacyComponentSerializer.legacy().serialize(item.getDisplayName());
-        ProtocolUtils.writeString(buf,
-            displayName.length() > 16 ? displayName.substring(0, 16) : displayName);
-      } else {
-        ProtocolUtils.writeString(buf, item.getName());
-      }
+      ProtocolUtils.writeString(buf, item.getName());
       buf.writeBoolean(action != REMOVE_PLAYER);
       buf.writeShort(item.getLatency());
     }
