@@ -89,3 +89,4 @@ plugins/
 ### Natives stuff ###
 native/mbedtls
 native/zlib-ng
+native/src/main/resources/linux_x64/velocity-cipher.so
