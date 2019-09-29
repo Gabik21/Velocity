@@ -1,4 +1,5 @@
 #!/bin/bash
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
 
 if [ ! -d zlib-ng ]; then
   echo "Cloning zlib-ng..."
