@@ -34,8 +34,8 @@ import java.util.concurrent.TimeUnit;
 public class ServerChannelInitializer extends ChannelInitializer<Channel> {
 
   private final VelocityServer server;
-  private final Ratelimiter ratelimiter = Ratelimiters.createWithMilliseconds(100);
-  private final Throttle globalThrottle = new Throttle(500, Duration.ofSeconds(20));
+  private final Ratelimiter ratelimiter = Ratelimiters.createWithMilliseconds(250);
+  private final Throttle globalThrottle = new Throttle(200, Duration.ofSeconds(20));
 
   public ServerChannelInitializer(final VelocityServer server) {
     this.server = server;
