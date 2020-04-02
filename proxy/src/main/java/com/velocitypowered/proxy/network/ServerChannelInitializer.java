@@ -18,8 +18,6 @@ import com.velocitypowered.proxy.protocol.netty.MinecraftDecoder;
 import com.velocitypowered.proxy.protocol.netty.MinecraftEncoder;
 import com.velocitypowered.proxy.protocol.netty.MinecraftVarintFrameDecoder;
 import com.velocitypowered.proxy.protocol.netty.MinecraftVarintLengthEncoder;
-import com.velocitypowered.proxy.util.ratelimit.Ratelimiter;
-import com.velocitypowered.proxy.util.ratelimit.Ratelimiters;
 import com.velocitypowered.proxy.util.ratelimit.Throttle;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
@@ -34,8 +32,7 @@ import java.util.concurrent.TimeUnit;
 public class ServerChannelInitializer extends ChannelInitializer<Channel> {
 
   private final VelocityServer server;
-  private final Ratelimiter ratelimiter = Ratelimiters.createWithMilliseconds(250);
-  private final Throttle globalThrottle = new Throttle(200, Duration.ofSeconds(20));
+  private final Throttle globalThrottle = new Throttle(1000, Duration.ofSeconds(10));
 
   public ServerChannelInitializer(final VelocityServer server) {
     this.server = server;
@@ -44,11 +41,6 @@ public class ServerChannelInitializer extends ChannelInitializer<Channel> {
   @Override
   protected void initChannel(final Channel ch) {
     InetAddress address = ((InetSocketAddress) ch.remoteAddress()).getAddress();
-
-    if (!ratelimiter.attempt(address)) {
-      ch.close();
-      return;
-    }
 
     if (!server.getAddressWhitelist().isWhitelisted(address) && globalThrottle.throttle()) {
       ch.close();
