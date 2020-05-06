@@ -116,6 +116,13 @@ public interface ProxyConfig {
   int getLoginRatelimit();
 
   /**
+   * Get the limit for how long a client must wait to request another status.
+   *
+   * @return the status rate limit (in milliseconds)
+   */
+  int getStatusRatelimit();
+
+  /**
    * Get the proxy favicon shown in the tablist.
    *
    * @return optional favicon

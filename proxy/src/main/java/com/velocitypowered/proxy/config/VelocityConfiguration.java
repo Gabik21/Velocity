@@ -384,6 +384,11 @@ public class VelocityConfiguration extends AnnotatedConfig implements ProxyConfi
   }
 
   @Override
+  public int getStatusRatelimit() {
+    return advanced.getStatusRatelimit();
+  }
+
+  @Override
   public Optional<Favicon> getFavicon() {
     return Optional.ofNullable(favicon);
   }
@@ -659,6 +664,13 @@ public class VelocityConfiguration extends AnnotatedConfig implements ProxyConfi
     private int loginRatelimit = 3000;
 
     @Comment({
+        "How fast (in milliseconds) are clients allowed to get another status after the last ",
+        "connection? By default, this is two seconds. Disable this by setting this to 0."
+    })
+    @ConfigKey("status-ratelimit")
+    private int statusRatelimit = 250;
+
+    @Comment({
         "Specify a custom timeout for connection timeouts here. The default is five seconds."})
     @ConfigKey("connection-timeout")
     private int connectionTimeout = 5000;
@@ -707,6 +719,10 @@ public class VelocityConfiguration extends AnnotatedConfig implements ProxyConfi
       return loginRatelimit;
     }
 
+    public int getStatusRatelimit() {
+      return statusRatelimit;
+    }
+
     public int getConnectionTimeout() {
       return connectionTimeout;
     }
@@ -729,16 +745,17 @@ public class VelocityConfiguration extends AnnotatedConfig implements ProxyConfi
 
     @Override
     public String toString() {
-      return "Advanced{"
-          + "compressionThreshold=" + compressionThreshold
-          + ", compressionLevel=" + compressionLevel
-          + ", loginRatelimit=" + loginRatelimit
-          + ", connectionTimeout=" + connectionTimeout
-          + ", readTimeout=" + readTimeout
-          + ", proxyProtocol=" + proxyProtocol
-          + ", tcpFastOpen=" + tcpFastOpen
-          + ", bungeePluginMessageChannel=" + bungeePluginMessageChannel
-          + '}';
+      return MoreObjects.toStringHelper(this)
+          .add("compressionThreshold", compressionThreshold)
+          .add("compressionLevel", compressionLevel)
+          .add("loginRatelimit", loginRatelimit)
+          .add("statusRatelimit", statusRatelimit)
+          .add("connectionTimeout", connectionTimeout)
+          .add("readTimeout", readTimeout)
+          .add("proxyProtocol", proxyProtocol)
+          .add("tcpFastOpen", tcpFastOpen)
+          .add("bungeePluginMessageChannel" , bungeePluginMessageChannel )
+          .toString();
     }
   }
 

@@ -74,7 +74,7 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
 
       switch (nextState) {
         case STATUS:
-          connection.setSessionHandler(new StatusSessionHandler(server, connection, ic));
+          handleStatus(ic);
           break;
         case LOGIN:
           this.handleLogin(handshake, ic);
@@ -97,6 +97,15 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
       default:
         return null;
     }
+  }
+
+  private void handleStatus(InitialInboundConnection ic) {
+    InetAddress address = ((InetSocketAddress) connection.getRemoteAddress()).getAddress();
+    if (!server.getIpStatusLimiter().attempt(address)) {
+      connection.close();
+      return;
+    }
+    connection.setSessionHandler(new StatusSessionHandler(server, connection, ic));
   }
 
   private void handleLogin(Handshake handshake, InitialInboundConnection ic) {

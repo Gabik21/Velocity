@@ -18,16 +18,24 @@ import com.velocitypowered.proxy.protocol.netty.MinecraftDecoder;
 import com.velocitypowered.proxy.protocol.netty.MinecraftEncoder;
 import com.velocitypowered.proxy.protocol.netty.MinecraftVarintFrameDecoder;
 import com.velocitypowered.proxy.protocol.netty.MinecraftVarintLengthEncoder;
+import com.velocitypowered.proxy.util.ratelimit.Ratelimiter;
+import com.velocitypowered.proxy.util.ratelimit.Ratelimiters;
+import com.velocitypowered.proxy.util.ratelimit.Throttle;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.timeout.ReadTimeoutHandler;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("WeakerAccess")
 public class ServerChannelInitializer extends ChannelInitializer<Channel> {
 
   private final VelocityServer server;
+  private final Ratelimiter ratelimiter = Ratelimiters.createWithMilliseconds(100);
+  private final Throttle globalThrottle = new Throttle(500, Duration.ofSeconds(20));
 
   public ServerChannelInitializer(final VelocityServer server) {
     this.server = server;
@@ -35,6 +43,18 @@ public class ServerChannelInitializer extends ChannelInitializer<Channel> {
 
   @Override
   protected void initChannel(final Channel ch) {
+    InetAddress address = ((InetSocketAddress) ch.remoteAddress()).getAddress();
+
+    if (!ratelimiter.attempt(address)) {
+      ch.close();
+      return;
+    }
+
+    if (!server.getAddressWhitelist().isWhitelisted(address) && globalThrottle.throttle()) {
+      ch.close();
+      return;
+    }
+
     ch.pipeline()
         .addLast(READ_TIMEOUT,
             new ReadTimeoutHandler(this.server.getConfiguration().getReadTimeout(),

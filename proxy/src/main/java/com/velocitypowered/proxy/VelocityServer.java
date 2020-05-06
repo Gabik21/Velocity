@@ -41,6 +41,7 @@ import com.velocitypowered.proxy.util.AddressUtil;
 import com.velocitypowered.proxy.util.EncryptionUtils;
 import com.velocitypowered.proxy.util.VelocityChannelRegistrar;
 import com.velocitypowered.proxy.util.bossbar.VelocityBossBar;
+import com.velocitypowered.proxy.util.ratelimit.AddressWhitelist;
 import com.velocitypowered.proxy.util.ratelimit.Ratelimiter;
 import com.velocitypowered.proxy.util.ratelimit.Ratelimiters;
 import io.netty.bootstrap.Bootstrap;
@@ -53,6 +54,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyPair;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Locale;
@@ -104,6 +106,8 @@ public class VelocityServer implements ProxyServer {
   private final Map<String, ConnectedPlayer> connectionsByName = new ConcurrentHashMap<>();
   private final VelocityConsole console;
   private @MonotonicNonNull Ratelimiter ipAttemptLimiter;
+  private @MonotonicNonNull Ratelimiter ipStatusLimiter;
+  private @MonotonicNonNull AddressWhitelist addressWhitelist;
   private final VelocityEventManager eventManager;
   private final VelocityScheduler scheduler;
   private final VelocityChannelRegistrar channelRegistrar = new VelocityChannelRegistrar();
@@ -205,6 +209,8 @@ public class VelocityServer implements ProxyServer {
     }
 
     ipAttemptLimiter = Ratelimiters.createWithMilliseconds(configuration.getLoginRatelimit());
+    ipStatusLimiter = Ratelimiters.createWithMilliseconds(configuration.getStatusRatelimit());
+    addressWhitelist = new AddressWhitelist(Duration.ofHours(3));
     loadPlugins();
 
     // Go ahead and fire the proxy initialization event. We block since plugins should have a chance
@@ -361,6 +367,7 @@ public class VelocityServer implements ProxyServer {
     }
 
     ipAttemptLimiter = Ratelimiters.createWithMilliseconds(newConfiguration.getLoginRatelimit());
+    ipStatusLimiter = Ratelimiters.createWithMilliseconds(newConfiguration.getStatusRatelimit());
     this.configuration = newConfiguration;
     eventManager.fireAndForget(new ProxyReloadEvent());
     return true;
@@ -450,6 +457,14 @@ public class VelocityServer implements ProxyServer {
     return ensureInitialized(ipAttemptLimiter);
   }
 
+  public Ratelimiter getIpStatusLimiter() {
+    return ensureInitialized(ipStatusLimiter);
+  }
+
+  public AddressWhitelist getAddressWhitelist() {
+    return ensureInitialized(addressWhitelist);
+  }
+
   private static <T> T ensureInitialized(T o) {
     if (o == null) {
       throw new IllegalStateException("The proxy isn't fully initialized.");
@@ -497,6 +512,8 @@ public class VelocityServer implements ProxyServer {
       connectionsByName.put(lowerName, connection);
       connectionsByUuid.put(connection.getUniqueId(), connection);
     }
+
+    addressWhitelist.whitelist(connection.getRemoteAddress().getAddress());
     return true;
   }
 
